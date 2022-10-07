@@ -6,7 +6,7 @@ Email: w2zhen@uwaterloo.ca & comccarthy@uwaterloo.ca
 
 ## How To Run The Program
 
-This program was written in Python 3
+This program was written in Python 3 <br />
 **Required Packages**
 - matplotlib 3.5.3
 
