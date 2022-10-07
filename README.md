@@ -7,7 +7,7 @@ Email: w2zhen@uwaterloo.ca & comccarthy@uwaterloo.ca
 ## How To Run The Program
 
 This program was written in Python 3. <br />
-Graphs and CSV data are exported in the directories of `/graph` and `/data` respectively.
+Graphs and CSV data are exported in the folders of `/graph` and `/data` respectively.
 
 ### Required Packages
 - matplotlib 3.5.3
