@@ -6,6 +6,11 @@ Email: w2zhen@uwaterloo.ca & comccarthy@uwaterloo.ca
 
 ## How To Run The Program
 
+This program was written in Python 3
+
+### Required Packages
+- matplotlib 3.5.3
+
 ### PyCharm IDE
 
 1. Open the project `ece-358-lab-1` in PyCharm
