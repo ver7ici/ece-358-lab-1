@@ -2,62 +2,57 @@ import heapq
 import generator
 from event import Event
 
-def heap_comp(a,b):
-    return a.event_time < b.event_time
-
 class MM1KSimulation:
     def __init__(self, simulation_time, utilization_queue, avg_packet_length, transmission_rate, max_queue_size):
         # Performance Metrics
-        self.En = 0
-        self.p_idle = 0
-        self.p_loss = 0
+        self.En = 0  # Average number of packets in buffer
+        self.p_idle = 0  # Proportion of time the server is idle
+        self.p_loss = 0  # Packet loss probability
 
         # Initial parameters
-        self.simulation_time = simulation_time
-        self.utilization_queue = utilization_queue
-        self.avg_packet_length = avg_packet_length
-        self.transmission_rate = transmission_rate
-        self.max_queue_size = max_queue_size
+        self.simulation_time = simulation_time  # T Simulation time
+        self.utilization_queue = utilization_queue  # ρ Range of utilization of the queue
+        self.avg_packet_length = avg_packet_length  # L Average length of packet in bits
+        self.transmission_rate = transmission_rate   # C Transmission rate of the output link in bits/second
+        self.max_queue_size = max_queue_size  # K Max queue size
 
         # Calculate Rates
-        self.packet_rate = (self.utilization_queue * self.transmission_rate) / self.avg_packet_length
-        self.observation_rate = self.packet_rate * 5
+        self.packet_rate = (self.utilization_queue * self.transmission_rate) / self.avg_packet_length  # Average number of arrival packets
+        self.observation_rate = self.packet_rate * 5  # Average number of observation events
 
         # Events
-        # self.arrival_events = []
-        # self.depart_events = []
-        self.events = []
-        # self.dropped = 0
-        # self.packets = 1
+        self.events = []  # Array to hold all events
 
+        # Properties
+        self.buffer = 0  # Buffer/queue
+        self.idle = 0  # Idle
+        self.loss = 0  # Loss
+        self.packets = 0  # Number of generated arrival packets
+        self.arrival = 0  # Number of arrival events
+        self.depart = 0  # Number of depart events
+        self.observation = 0  # Number of observation events
 
     def execute(self):
+        # Generate Events
         self.generate_observations()
         self.generate_arrivals()
-        # self.generate_packets()
-        self.calculate_metrics()
 
-    def calculate_metrics(self):
+        # Initialize queue size & departure time
         queue_size = 0
-
-        buffer = 0
-        idle = 0
-        loss = 0
-        packets = 0
-
-        arrival = 0
-        depart = 0
-        observation = 0
         depart_time = 0
 
+        # Iterate through each event
         while self.events:
+            # Pop event from min-heap
             event = heapq.heappop(self.events)
+
             if event.event_type == "ARRIVAL":
-                packets += 1
+                # Increment generated arrival packet
+                self.packets += 1
 
                 if queue_size < self.max_queue_size:
-                    arrival += 1
-                    queue_size += 1
+                    self.arrival += 1
+                    queue_size += 1  # Increase queue size if arrival event
 
                     arrival_time = event.event_time
                     service_time = self.generate_service()
@@ -70,72 +65,36 @@ class MM1KSimulation:
                     depart_event = Event('DEPART', depart_time)
                     heapq.heappush(self.events, depart_event)
                 else:
-                    loss += 1
+                    # If queue size is greater than or equal to max queue size, 
+                    # drop arrival packet and don't generate a departure event
+                    self.loss += 1
             elif event.event_type == "DEPART":
-                depart += 1
-                queue_size -= 1
+                self.depart += 1
+                queue_size -= 1  # Decrease queue size if departure event
             elif event.event_type == "OBSERVATION":
-                observation += 1
-                current_packets_buffer = arrival - depart
+                self.observation += 1
+                current_packets_buffer = self.arrival - self.depart
+
+                # Buffer is idle when there are no arrivals
                 if current_packets_buffer == 0:
-                    idle += 1
-                buffer += current_packets_buffer
+                    self.idle += 1
+
+                # Sum of packets in buffer
+                self.buffer += current_packets_buffer
             else:
                 raise Exception('Unknown event type')
 
-        # print("ARRIVALS: " + str(arrival))
-        # print("DEPART: " + str(depart))
-        # print("OBSERVATION: " + str(observation))
-        # print("BUFFER: " + str(buffer))
-        # print("LOSS: " + str(loss))
-        # print("GENERATED: " + str(packets))
-        # print("TOTAL: " + str(packets - loss))
-        self.En = buffer/observation
-        self.p_idle = idle/observation
-        self.p_loss = loss/packets
-
-        # buffer = 0
-        # idle = 0
-        # arrival = 0
-        # depart = 0
-        # observation = 0
-        #
-        # self.events.extend(self.arrival_events)
-        # self.events.extend(self.depart_events)
-        # self.events.sort(key=lambda e: e.event_time)
-        #
-        # for event in self.events:
-        #     if event.event_type == 'ARRIVAL':
-        #         arrival += 1
-        #     elif event.event_type == 'DEPART':
-        #         depart += 1
-        #     elif event.event_type == 'OBSERVATION':
-        #         observation += 1
-        #         current_packets_buffer = arrival - depart
-        #         if current_packets_buffer == 0:
-        #             idle += 1
-        #         buffer += current_packets_buffer
-        #     else:
-        #         raise Exception('Unknown event type')
-        #
-        # print("ARRIVALS: " + str(arrival))
-        # print("DEPART: " + str(depart))
-        # print("OBSERVATION: " + str(observation))
-        # print("BUFFER: " + str(buffer))
-        # print("LOSS: " + str(self.dropped))
-        # print("GENERATED: " + str(self.packets))
-        # print("TOTAL: " + str(self.packets - self.dropped))
-        # self.En = buffer/observation
-        # self.p_idle = idle/observation
-        # self.p_loss = self.dropped/self.packets
+        # Calculate metrics
+        self.En = self.buffer/self.observation
+        self.p_idle = self.idle/self.observation
+        self.p_loss = self.loss/self.packets
 
     def generate_observations(self):
         observation_time = 0
         while observation_time < self.simulation_time:
-            observation_time += self.generate_observer()
+            observation_time += self.generate_inter_observation()
             observation_event = Event('OBSERVATION', observation_time)
             heapq.heappush(self.events, observation_event)
-            # self.events.append(observation_event)
 
     def generate_arrivals(self):
         arrival_time = 0
@@ -143,55 +102,8 @@ class MM1KSimulation:
             arrival_time += self.generate_inter_arrival()
             arrival_event = Event('ARRIVAL', arrival_time)
             heapq.heappush(self.events, arrival_event)
-            # self.events.append(arrival_event)
 
-    # def generate_packets(self):
-    #     queue_size = 1
-    #     arrival_time = self.generate_inter_arrival()
-    #     depart_time = arrival_time + self.generate_service()
-    #     current_depart_time = depart_time
-    #     depart_counter = 0
-    #
-    #     arrival_event = Event('ARRIVAL', arrival_time)
-    #     self.arrival_events.append(arrival_event)
-    #     depart_event = Event('DEPART', depart_time)
-    #     self.depart_events.append(depart_event)
-    #
-    #     while arrival_time < self.simulation_time:
-    #         arrival_time += self.generate_inter_arrival()
-    #         service_time = self.generate_service()
-    #
-    #         queue_size += 1
-    #         self.packets += 1
-    #
-    #         arrival_event = Event('ARRIVAL', arrival_time)
-    #         self.arrival_events.append(arrival_event)
-    #
-    #         if arrival_time <= current_depart_time:
-    #             if queue_size < self.max_queue_size:
-    #                 depart_time += service_time
-    #
-    #                 depart_event = Event('DEPART', depart_time)
-    #                 self.depart_events.append(depart_event)
-    #             else:
-    #                 self.arrival_events.pop()
-    #                 self.dropped += 1
-    #                 continue
-    #         else:
-    #             queue_size -= 1
-    #             depart_counter += 1
-    #
-    #             if arrival_time <= depart_time:
-    #                 depart_time += service_time
-    #             else:
-    #                 depart_time = arrival_time + service_time
-    #
-    #             depart_event = Event('DEPART', depart_time)
-    #             self.depart_events.append(depart_event)
-    #
-    #             current_depart_time = self.depart_events[depart_counter].event_time
-
-    def generate_observer(self):
+    def generate_inter_observation(self):
         return generator.exponential_random(self.observation_rate)
 
     def generate_inter_arrival(self):
