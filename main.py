@@ -79,34 +79,58 @@ def question_3():
     transmission_rate = 1 * MBPS  # C Transmission rate of the output link in bits/second
     utilization_queues = [0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]  # ρ Range of utilization of the queue
 
-    avg_packets = []
-    p_idles = []
+    # Store array of metrics for graph
+    avg_packets = []  # E[N]
+    p_idles = []  # Pidle
 
+    # Store array of data for CSV
+    runs_data = []
+
+    # Iterate for for the range of 0.25 < ρ < 0.95 with step 0.1
     for utilization_queue in utilization_queues:
+        # Initialize MM1Simulation
         simulation = MM1Simulation(simulation_time, utilization_queue, avg_packet_length, transmission_rate)
+
+        # Execute simulation
         print(f"Simulation Execute - Traffic Intensity (ρ): {utilization_queue}")
         simulation.execute()
-        print(f"En: {simulation.En}")
+
+        # Retrieve performance metrics
+        print(f"En: {simulation.En}")  # Average numver of packets in buffer
         avg_packets.append(simulation.En)
-        print(f"P_idle: {simulation.p_idle}")
+        print(f"P_idle: {simulation.p_idle}")  # Proportion of time the server is idle
         p_idles.append(simulation.p_idle)
         print("")
 
+        # Store all properties in array
+        runs_data.append([utilization_queue, simulation.buffer, simulation.idle, simulation.arrival, simulation.depart, simulation.observation, simulation.En, simulation.p_idle])
+
     # En Graph
+    print("Generating E[N] graph...")
     plt.plot(utilization_queues, avg_packets, linestyle='--', marker='o')
     plt.title("Average Number of Packets vs Traffic Intensity")
-    plt.ylabel('Average Number of Packets (En)')
+    plt.ylabel('Average Number of Packets (E[N])')
     plt.xlabel('Traffic Intensity (ρ)')
-    plt.savefig(f"{GRAPH_FOLDER}/question3-en-graph.png", bbox_inches='tight')
+    plt.savefig(f"{GRAPH_FOLDER}/question3-en-graph-T-{simulation_time}.png", bbox_inches='tight')
     plt.close()
 
     # Pidle Graph
+    print("Generating Pidle graph...")
     plt.plot(utilization_queues, p_idles, linestyle='--', marker='o')
     plt.title("Proportion of Time Server is Idle vs Traffic Intensity")
-    plt.ylabel('Proportion of Time Server is Idle (P_idle)')
+    plt.ylabel('Proportion of Time Server is Idle (Pidle)')
     plt.xlabel('Traffic Intensity (ρ)')
-    plt.savefig(f"{GRAPH_FOLDER}/question3-p_idle-graph.png", bbox_inches='tight')
+    plt.savefig(f"{GRAPH_FOLDER}/question3-p_idle-graph-T-{simulation_time}.png", bbox_inches='tight')
     plt.close()
+
+    # Write to CSV file
+    print("Writing to CSV...")
+    header = ['Traffic Intensity (ρ)', 'Packets in Buffer', 'Idle Time', 'Arrivals', 'Departs', 'Observations', 'E[N]', 'Pidle']
+    with open(f"{DATA_FOLDER}/question3-mm1-simulation-data-T-{simulation_time}.csv", 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(runs_data)
+    print("Done!")
 
 
 # Question 4 - M/M/1 Queue Simulation for ρ = 1.2
