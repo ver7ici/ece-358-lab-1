@@ -21,36 +21,37 @@ class MM1Simulation:
         # Events
         self.events = []
 
+        # Properties
+        self.buffer = 0
+        self.idle = 0
+        self.arrival = 0
+        self.depart = 0
+        self.observation = 0
+
     def execute(self):
         self.generate_observations()
         self.generate_packets()
         self.calculate_metrics()
 
     def calculate_metrics(self):
-        buffer = 0
-        idle = 0
-        arrival = 0
-        depart = 0
-        observation = 0
-
         self.events.sort(key=lambda e: e.event_time)
 
         for event in self.events:
             if event.event_type == 'ARRIVAL':
-                arrival += 1
+                self.arrival += 1
             elif event.event_type == 'DEPART':
-                depart += 1
+                self.depart += 1
             elif event.event_type == 'OBSERVATION':
-                observation += 1
-                current_packets_buffer = arrival - depart
+                self.observation += 1
+                current_packets_buffer = self.arrival - self.depart
                 if current_packets_buffer == 0:
-                    idle += 1
-                buffer += current_packets_buffer
+                    self.idle += 1
+                self.buffer += current_packets_buffer
             else:
                 raise Exception('Unknown event type')
 
-        self.En = buffer/observation
-        self.p_idle = idle/observation
+        self.En = self.buffer/self.observation
+        self.p_idle = self.idle/self.observation
 
     def generate_observations(self):
         observation_time = 0
